@@ -1,0 +1,19 @@
+{
+  "env": {
+    "test": {
+      "presets" : ["flow", "es2015", "stage-0"]
+    },
+    "cjs": {
+      "presets": ["flow", ["es2015", { "loose": true }], "stage-2"],
+      "ignore": [
+        "**/__tests__/**"
+      ]
+    },
+    "es": {
+      "presets": ["flow", ["es2015", { "loose": true, "modules": false }], "stage-2"],
+      "ignore": [
+        "**/__tests__/**"
+      ]
+    }
+  }
+}
