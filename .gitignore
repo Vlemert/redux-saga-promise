@@ -1,0 +1,6 @@
+.idea
+coverage
+flow-typed
+node_modules
+es
+lib
