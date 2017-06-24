@@ -1,0 +1,46 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`delay returns a promise that resolves after a specific time 1`] = `
+Array [
+  1000,
+]
+`;
+
+exports[`delay returns a promise that resolves after a specific time 2`] = `
+Array [
+  1000,
+  2000,
+]
+`;
+
+exports[`delay returns a promise that resolves after a specific time 3`] = `
+Array [
+  1000,
+  2000,
+]
+`;
+
+exports[`delay returns a promise that resolves after a specific time 4`] = `
+Array [
+  1000,
+  2000,
+]
+`;
+
+exports[`delay returns a promise that resolves after a specific time 5`] = `
+Array [
+  1000,
+  2000,
+  3000,
+]
+`;
+
+exports[`delay returns a promise that resolves after a specific time 6`] = `
+Array [
+  1000,
+  2000,
+  3000,
+  3001,
+  3001,
+]
+`;

@@ -6,6 +6,7 @@ import type { TakePattern } from './types';
 import createTake from './utils/take';
 import race from './utils/race';
 import all from './utils/all';
+import delay from './utils/delay';
 
 function createMiddleware<S, A: Object>() {
   let connectedStore: MiddlewareAPI<S, A>;
@@ -60,12 +61,6 @@ function createMiddleware<S, A: Object>() {
       return connectedStore.getState();
     }
     return selector(connectedStore.getState(), ...args);
-  };
-
-  const delay = async (ms) => {
-    return new Promise(resolve => {
-      setTimeout(resolve, ms);
-    });
   };
 
   middleware.run = call;

@@ -37,6 +37,6 @@ describe('all', () => {
       'b': Promise.reject('some error'),
     });
 
-    expect(allPromise).rejects.toBe('some error');
+    await expect(allPromise).rejects.toBe('some error');
   });
 });
