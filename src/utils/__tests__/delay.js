@@ -19,7 +19,7 @@ describe('delay', () => {
     const moveTime = (time: number) => {
       jest.runTimersToTime(time);
 
-      return new Promise(resolve => setImmediate(resolve));
+      return new Promise(setImmediate);
     };
 
     await moveTime(1000);

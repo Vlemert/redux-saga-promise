@@ -23,6 +23,8 @@ export type SagaHelpers<A> = {
   take: Take<A>,
   call: <T>((helpers: SagaHelpers<A>) => () => T) => T,
   put: (A) => void,
+  delay: (number) => Promise<void>,
+  cancel: (promise: Promise<any>) => void,
 };
 
 export interface SagaMiddleware<S, A> {

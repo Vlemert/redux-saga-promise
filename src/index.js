@@ -20,16 +20,61 @@ function createMiddleware<S, A: Object>() {
 
     const take = createTake(takePatterns);
 
-    call = <T>(saga: (helpers: *) => () => T, ...args): T => {
-      return saga({
+    call = <T>(saga: (helpers: *) => () => T, parentCanceled, ...args): T => {
+      const promises = new Map();
+      const cancel = (promiseToCancel) => {
+        const rej = promises.get(promiseToCancel);
+
+        if (!rej) {
+          // do we want to be able to cancel other things as well? (delay, race, etc)
+          throw new Error('You can only cancel call promises');
+        }
+
+        if (rej) {
+          promiseToCancel.catch(() => {/* Prevent unhandled promise rejection */});
+          rej('canceled');
+        }
+      };
+
+      const sagaPromise = saga({
         take,
         put,
-        call,
+        call: (saga: (helpers: *) => () => T, ...args) => {
+          let rej;
+          const cancelHorses = [new Promise((resolve, reject) => {
+            rej = reject;
+          })];
+          if (parentCanceled) {
+            cancelHorses.push(parentCanceled);
+          }
+
+          const canceled = Promise.race(cancelHorses);
+
+          const race = Promise.race([
+            call(saga, canceled, ...args),
+            canceled,
+          ]);
+
+          if (rej) {
+            promises.set(race, rej);
+          }
+
+          return race;
+        },
         select,
         race,
         all,
-        delay,
+        delay: (time: number) => {
+          const horses = [delay(time)];
+          if (parentCanceled) {
+            horses.push(parentCanceled);
+          }
+          return Promise.race(horses);
+        },
+        cancel,
       })(...args);
+
+      return sagaPromise;
     };
 
     const select = (selector, ...args) => {

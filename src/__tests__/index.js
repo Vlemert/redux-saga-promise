@@ -120,6 +120,39 @@ describe('middleware', () => {
     expect(dispatch).toBeCalledWith(action);
   });
 
+  test('canceling of sagas', async () => {
+    const subSaga2Canceled = jest.fn();
+    const subSaga2 = ({ delay }) => async () => {
+      try {
+        await delay(2000);
+      } catch (e) {
+        subSaga2Canceled();
+      }
+    };
+
+    const subSagaCanceled = jest.fn();
+    const subSaga = ({ call }) => async () => {
+      const callPromise = call(subSaga2);
+
+      try {
+        await callPromise;
+      } catch (e) {
+        subSagaCanceled();
+      }
+    };
+
+    const promise = middleware.run(({ call, cancel }) => async () => {
+      const callPromise = call(subSaga);
+      cancel(callPromise);
+    });
+    await promise;
+
+    await new Promise(setImmediate);
+
+    expect(subSagaCanceled).toBeCalled();
+    expect(subSaga2Canceled).toBeCalled();
+  });
+
   // test('selecting from state', async () => {
   //   getState.mockClear();
   //
