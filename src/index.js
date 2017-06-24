@@ -8,8 +8,69 @@ import race from './utils/race';
 import all from './utils/all';
 import delay from './utils/delay';
 
+const voidPromise = new Promise(() => {});
+
+const cancelable = (func, canceled) => (...args) => Promise.race([
+  func(...args),
+  canceled,
+]);
+
+const createCanceled = (canceled) => {
+  let isCanceled = false;
+  canceled.catch(() => {
+    isCanceled = true;
+  });
+  return () => {
+    return isCanceled;
+  };
+};
+
+const createCallAndCancel = (innerCall, canceledFromParent) => {
+  const sagaPromises = new Map();
+
+  const call = <T>(saga: (helpers: *) => () => T, ...args) => {
+    let rej;
+    const canceled = Promise.race([
+      new Promise((resolve, reject) => {
+        rej = reject;
+      }),
+      canceledFromParent,
+    ]);
+
+    const race = Promise.race([
+      innerCall(saga, canceled, ...args),
+      canceled,
+    ]);
+
+    if (rej) {
+      sagaPromises.set(race, rej);
+    }
+
+    return race;
+  };
+
+  const cancel = (sagaPromise) => {
+    const cancelSaga = sagaPromises.get(sagaPromise);
+
+    if (!cancelSaga) {
+      // do we want to be able to cancel other things as well? (delay, race, etc)
+      throw new Error('You can only cancel call promises');
+    }
+
+    if (cancelSaga) {
+      sagaPromise.catch(() => {/* Prevent unhandled promise rejection */});
+      cancelSaga('canceled');
+    }
+  };
+
+  return {
+    call,
+    cancel,
+  }
+};
+
 function createMiddleware<S, A: Object>() {
-  let call;
+  let innerCall;
 
   const middleware = (store: MiddlewareAPI<S, A>) => {
     let takePatterns: Array<TakePattern<A>> = [];
@@ -20,61 +81,20 @@ function createMiddleware<S, A: Object>() {
 
     const take = createTake(takePatterns);
 
-    call = <T>(saga: (helpers: *) => () => T, parentCanceled, ...args): T => {
-      const promises = new Map();
-      const cancel = (promiseToCancel) => {
-        const rej = promises.get(promiseToCancel);
+    innerCall = <T>(saga: (helpers: *) => () => T, canceledFromParent = voidPromise, ...args): T => {
+      const { call, cancel } = createCallAndCancel(innerCall, canceledFromParent);
 
-        if (!rej) {
-          // do we want to be able to cancel other things as well? (delay, race, etc)
-          throw new Error('You can only cancel call promises');
-        }
-
-        if (rej) {
-          promiseToCancel.catch(() => {/* Prevent unhandled promise rejection */});
-          rej('canceled');
-        }
-      };
-
-      const sagaPromise = saga({
+      return saga({
         take,
         put,
-        call: (saga: (helpers: *) => () => T, ...args) => {
-          let rej;
-          const cancelHorses = [new Promise((resolve, reject) => {
-            rej = reject;
-          })];
-          if (parentCanceled) {
-            cancelHorses.push(parentCanceled);
-          }
-
-          const canceled = Promise.race(cancelHorses);
-
-          const race = Promise.race([
-            call(saga, canceled, ...args),
-            canceled,
-          ]);
-
-          if (rej) {
-            promises.set(race, rej);
-          }
-
-          return race;
-        },
         select,
-        race,
-        all,
-        delay: (time: number) => {
-          const horses = [delay(time)];
-          if (parentCanceled) {
-            horses.push(parentCanceled);
-          }
-          return Promise.race(horses);
-        },
+        call,
         cancel,
+        race: cancelable(race, canceledFromParent),
+        all: cancelable(all, canceledFromParent),
+        delay: cancelable(delay, canceledFromParent),
+        canceled: createCanceled(canceledFromParent),
       })(...args);
-
-      return sagaPromise;
     };
 
     const select = (selector, ...args) => {
@@ -104,8 +124,8 @@ function createMiddleware<S, A: Object>() {
   };
 
   middleware.run = (...args) => {
-    if (call) {
-      return call(...args);
+    if (innerCall) {
+      return innerCall(...args);
     }
 
     throw new Error('Cannot run sagas before connecting the middleware to a store');

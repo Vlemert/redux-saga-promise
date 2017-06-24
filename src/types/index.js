@@ -25,6 +25,9 @@ export type SagaHelpers<A> = {
   put: (A) => void,
   delay: (number) => Promise<void>,
   cancel: (promise: Promise<any>) => void,
+  canceled: () => boolean,
+  race: Race,
+  all: All,
 };
 
 export interface SagaMiddleware<S, A> {

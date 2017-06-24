@@ -122,22 +122,22 @@ describe('middleware', () => {
 
   test('canceling of sagas', async () => {
     const subSaga2Canceled = jest.fn();
-    const subSaga2 = ({ delay }) => async () => {
+    const subSaga2 = ({ delay, canceled }) => async () => {
       try {
         await delay(2000);
       } catch (e) {
-        subSaga2Canceled();
+        subSaga2Canceled(canceled());
       }
     };
 
     const subSagaCanceled = jest.fn();
-    const subSaga = ({ call }) => async () => {
+    const subSaga = ({ call, canceled }) => async () => {
       const callPromise = call(subSaga2);
 
       try {
         await callPromise;
       } catch (e) {
-        subSagaCanceled();
+        subSagaCanceled(canceled());
       }
     };
 
@@ -149,8 +149,62 @@ describe('middleware', () => {
 
     await new Promise(setImmediate);
 
-    expect(subSagaCanceled).toBeCalled();
-    expect(subSaga2Canceled).toBeCalled();
+    expect(subSagaCanceled).toBeCalledWith(true);
+    expect(subSaga2Canceled).toBeCalledWith(true);
+  });
+
+  test('canceling of a race', async () => {
+    const raceSucceeded = jest.fn();
+    const raceCanceled = jest.fn();
+    const subSaga = ({ race, canceled }) => async () => {
+      try {
+        await race([
+          new Promise(() => {}),
+          new Promise(() => {}),
+        ]);
+        raceSucceeded();
+      } catch (e) {
+        raceCanceled(canceled());
+      }
+    };
+
+    const promise = middleware.run(({ call, cancel }) => async () => {
+      const callPromise = call(subSaga);
+      cancel(callPromise);
+    });
+    await promise;
+
+    await new Promise(setImmediate);
+
+    expect(raceCanceled).toBeCalledWith(true);
+    expect(raceSucceeded).not.toBeCalled();
+  });
+
+  test('canceling of an all', async () => {
+    const allSucceeded = jest.fn();
+    const allCanceled = jest.fn();
+    const subSaga = ({ all, canceled }) => async () => {
+      try {
+        await all([
+          new Promise(() => {}),
+          new Promise(() => {}),
+        ]);
+        allSucceeded();
+      } catch (e) {
+        allCanceled(canceled());
+      }
+    };
+
+    const promise = middleware.run(({ call, cancel }) => async () => {
+      const callPromise = call(subSaga);
+      cancel(callPromise);
+    });
+    await promise;
+
+    await new Promise(setImmediate);
+
+    expect(allCanceled).toBeCalledWith(true);
+    expect(allSucceeded).not.toBeCalled();
   });
 
   // test('selecting from state', async () => {
