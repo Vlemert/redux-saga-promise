@@ -9,12 +9,36 @@ import all from './utils/all';
 import delay from './utils/delay';
 
 function createMiddleware<S, A: Object>() {
-  let connectedStore: MiddlewareAPI<S, A>;
-
-  let takePatterns: Array<TakePattern<A>> = [];
+  let call;
 
   const middleware = (store: MiddlewareAPI<S, A>) => {
-    connectedStore = store;
+    let takePatterns: Array<TakePattern<A>> = [];
+
+    const put = (action) => {
+      store.dispatch(action);
+    };
+
+    const take = createTake(takePatterns);
+
+    call = <T>(saga: (helpers: *) => () => T, ...args): T => {
+      return saga({
+        take,
+        put,
+        call,
+        select,
+        race,
+        all,
+        delay,
+      })(...args);
+    };
+
+    const select = (selector, ...args) => {
+      if (!selector) {
+        return store.getState();
+      }
+      return selector(store.getState(), ...args);
+    };
+
     return (next: (A) => A) => (action: A): A => {
       let result = next(action);
 
@@ -34,36 +58,13 @@ function createMiddleware<S, A: Object>() {
     }
   };
 
-  const put = (action) => {
-    if (!connectedStore) {
-      throw new Error('Attempting to put before connecting middleware');
+  middleware.run = (...args) => {
+    if (call) {
+      return call(...args);
     }
 
-    connectedStore.dispatch(action);
+    throw new Error('Cannot run sagas before connecting the middleware to a store');
   };
-
-  const take = createTake(takePatterns);
-
-  const call = <T>(saga: (helpers: *) => () => T, ...args): T => {
-    return saga({
-      take,
-      put,
-      call,
-      select,
-      race,
-      all,
-      delay,
-    })(...args);
-  };
-
-  const select = (selector, ...args) => {
-    if (!selector) {
-      return connectedStore.getState();
-    }
-    return selector(connectedStore.getState(), ...args);
-  };
-
-  middleware.run = call;
 
   return middleware;
 }
