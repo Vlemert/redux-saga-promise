@@ -4,6 +4,8 @@ import type { MiddlewareAPI } from 'redux';
 
 import type { TakePattern } from './types';
 import createTake from './utils/take';
+import race from './utils/race';
+import all from './utils/all';
 
 function createMiddleware<S, A: Object>() {
   let connectedStore: MiddlewareAPI<S, A>;
@@ -58,43 +60,6 @@ function createMiddleware<S, A: Object>() {
       return connectedStore.getState();
     }
     return selector(connectedStore.getState(), ...args);
-  };
-
-  const race = (promises) => {
-    if (Array.isArray(promises)) {
-      return Promise.race(promises);
-    }
-
-    const mappedPromises = Object.keys(promises).map(
-      promiseKey => new Promise(async (resolve, reject) => {
-        let result;
-        try {
-          result = await promises[promiseKey];
-        } catch (e) {
-          reject(e);
-        }
-        resolve({
-          [promiseKey]: result,
-        });
-      })
-    );
-
-    return Promise.race(mappedPromises);
-  };
-
-  const all = async (promises) => {
-    if (Array.isArray(promises)) {
-      return Promise.all(promises);
-    }
-
-    const promiseKeys = Object.keys(promises);
-
-    const result = await Promise.all(promiseKeys.map(promiseKey => promises[promiseKey]));
-
-    return promiseKeys.reduce((completeResult, promiseKey, index) => ({
-      ...completeResult,
-      [promiseKey]: result[index],
-    }), {});
   };
 
   const delay = async (ms) => {

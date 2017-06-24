@@ -29,3 +29,15 @@ export interface SagaMiddleware<S, A> {
   (store: MiddlewareAPI<S, A>): (next: (A) => A) => (A) => A;
   run: <T>((helpers: SagaHelpers<A>) => () => T) => T;
 }
+
+export type $awaitmaybe = <T>(Promise<T>) => T | typeof undefined;
+
+export interface Race {
+  <T, Elem: Promise<T> | T>(Array<Elem>): Promise<T>;
+  <P, T: { [string]: Promise<P> }>(T): Promise<$ObjMap<T, $awaitmaybe>>;
+}
+
+export interface All {
+  <Elem, T:Iterable<Elem>>(T): Promise<$TupleMap<T, typeof $await>>;
+  <P, T: { [string]: Promise<P> }>(T): Promise<$ObjMap<T, typeof $await>>;
+}
