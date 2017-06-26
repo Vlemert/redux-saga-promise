@@ -19,20 +19,21 @@ export type Take<A> = {
   <B: A>(ActionCreator<B>): Promise<B>,
 };
 
-export type SagaHelpers<A> = {
+export type SagaHelpers<S, A> = {
   take: Take<A>,
-  call: <T>((helpers: SagaHelpers<A>) => () => T) => T,
+  call: <T>((helpers: SagaHelpers<S, A>) => () => T) => T,
   put: (A) => void,
   delay: (number) => Promise<void>,
   cancel: (promise: Promise<any>) => void,
   canceled: () => boolean,
   race: Race,
   all: All,
+  select: <T>(selector: (S) => T) => T,
 };
 
 export interface SagaMiddleware<S, A> {
   (store: MiddlewareAPI<S, A>): (next: (A) => A) => (A) => A;
-  run: <T>((helpers: SagaHelpers<A>) => () => T) => T;
+  run: <T>((helpers: SagaHelpers<S, A>) => () => T) => T;
 }
 
 export type $awaitmaybe = <T>(Promise<T>) => T | typeof undefined;

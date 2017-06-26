@@ -206,22 +206,4 @@ describe('middleware', () => {
     expect(allCanceled).toBeCalledWith(true);
     expect(allSucceeded).not.toBeCalled();
   });
-
-  // test('selecting from state', async () => {
-  //   getState.mockClear();
-  //
-  //   const testState = {};
-  //   getState.mockImplementationOnce(() => testState);
-  //   const testSelectedState = {};
-  //   const selector = jest.fn(() => testSelectedState);
-  //
-  //   const promise = middleware.run(({ select }) => async () => {
-  //     return await select(selector);
-  //   });
-  //   const result = await promise;
-  //
-  //   expect(getState).toBeCalled();
-  //   expect(selector).toBeCalledWith(testState);
-  //   expect(result).toBe(testSelectedState);
-  // });
 });
