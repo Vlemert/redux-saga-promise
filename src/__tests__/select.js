@@ -36,7 +36,7 @@ describe('middleware', () => {
     );
   });
 
-  test('selecting from state', async () => {
+  test('selecting from state using selector', async () => {
     const selector = (state: State) => state.someValue;
 
     const promise = middleware.run(({ select }) => async () => {
@@ -46,5 +46,14 @@ describe('middleware', () => {
 
     expect(result).toBe(initialState.someValue);
     expect(result.a).toBe('test');
+  });
+
+  test('selecting from state using no selector', async () => {
+    const promise = middleware.run(({ select }) => async () => {
+      return select();
+    });
+    const result = await promise;
+
+    expect(result).toBe(initialState);
   });
 });

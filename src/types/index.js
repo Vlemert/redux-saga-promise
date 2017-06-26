@@ -28,7 +28,10 @@ export type SagaHelpers<S, A> = {
   canceled: () => boolean,
   race: Race,
   all: All,
-  select: <T>(selector: (S) => T) => T,
+  select: {
+    <T>(selector: (S) => T): T,
+    (): S,
+  },
 };
 
 export interface SagaMiddleware<S, A> {
