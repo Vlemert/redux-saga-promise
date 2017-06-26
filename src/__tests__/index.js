@@ -206,4 +206,12 @@ describe('middleware', () => {
     expect(allCanceled).toBeCalledWith(true);
     expect(allSucceeded).not.toBeCalled();
   });
+
+  test('canceling of non call promise', async () => {
+    const promise = middleware.run(({ cancel }) => async () => {
+      cancel(new Promise(() => {}));
+    });
+
+    await expect(promise).rejects.toMatchSnapshot();
+  });
 });

@@ -1,0 +1,3 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`middleware canceling of non call promise 1`] = `[Error: You can only cancel call promises]`;
