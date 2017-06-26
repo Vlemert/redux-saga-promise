@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Generator-less implementation of Redux-Saga",
   "main": "lib/index.js",
+  "module": "'es/index.js",
   "repository": "git@github.com:Vlemert/redux-saga-promise.git",
   "author": "Niels Vleeming <niels.vleeming@gmail.com>",
   "license": "MIT",
