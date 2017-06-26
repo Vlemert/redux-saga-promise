@@ -1,3 +1,5 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`middleware canceling of non call promise 1`] = `[Error: You can only cancel call promises]`;
+
+exports[`middleware throws if middleware is not attached to a store 1`] = `"Cannot run sagas before connecting the middleware to a store"`;

@@ -49,6 +49,11 @@ describe('middleware', () => {
     );
   });
 
+  test('throws if middleware is not attached to a store', () => {
+    const unattachedMiddleware = createMiddleware();
+    expect(() => unattachedMiddleware.run()).toThrowErrorMatchingSnapshot();
+  });
+
   describe('waiting for actions', () => {
     test('single', async () => {
       const promise = middleware.run(({ take }) => async () => {
