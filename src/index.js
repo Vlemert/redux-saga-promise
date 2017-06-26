@@ -57,10 +57,8 @@ const createCallAndCancel = (innerCall, canceledFromParent) => {
       throw new Error('You can only cancel call promises');
     }
 
-    if (cancelSaga) {
-      sagaPromise.catch(() => {/* Prevent unhandled promise rejection */});
-      cancelSaga('canceled');
-    }
+    sagaPromise.catch(() => {/* Prevent unhandled promise rejection */});
+    cancelSaga('canceled');
   };
 
   return {
