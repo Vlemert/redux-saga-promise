@@ -2,44 +2,14 @@
 
 import type { MiddlewareAPI } from 'redux';
 
-import type { TakePattern } from './types';
-import createTake from './utils/take';
 import race from './utils/race';
 import all from './utils/all';
 import delay from './utils/delay';
 import isRejected from './utils/is-rejected';
 import cancelable from './utils/cancelable';
+import createTakeAndActionMiddleware from './utils/create-take-and-action-middleware';
 
 const voidPromise = new Promise(() => {});
-
-const createTakeAndActionMiddleware = <A: Object>() => {
-  let takePatterns: Array<TakePattern<A>> = [];
-
-  const take = createTake(takePatterns);
-
-  const actionMiddleware = (next: (A) => A) => (action: A): A => {
-    let result = next(action);
-
-    takePatterns = takePatterns.reduce((falsePatterns, pattern) => {
-      if (pattern.func(action)) {
-        pattern.resolve(action);
-        return falsePatterns;
-      }
-
-      return [
-        ...falsePatterns,
-        pattern,
-      ];
-    }, []);
-
-    return result;
-  };
-
-  return {
-    take,
-    actionMiddleware,
-  }
-};
 
 const createSagaRunner = (take, put, select) => {
   const runSaga = <T>(saga: (helpers: *) => () => T, canceledFromParent = voidPromise, ...args): T => {
