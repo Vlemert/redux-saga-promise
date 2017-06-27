@@ -120,9 +120,7 @@ function createMiddleware<S, A: Object>() {
   let run;
 
   const middleware = (store: MiddlewareAPI<S, A>) => {
-    const put = (action) => {
-      store.dispatch(action);
-    };
+    const put = store.dispatch;
 
     const select = (selector, ...args) => {
       if (!selector) {
