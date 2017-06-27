@@ -7,6 +7,7 @@ import createTake from './utils/take';
 import race from './utils/race';
 import all from './utils/all';
 import delay from './utils/delay';
+import isRejected from './utils/is-rejected';
 
 const voidPromise = new Promise(() => {});
 
@@ -14,16 +15,6 @@ const cancelable = (func, canceled) => (...args) => Promise.race([
   func(...args),
   canceled,
 ]);
-
-const createCanceled = (canceled) => {
-  let isCanceled = false;
-  canceled.catch(() => {
-    isCanceled = true;
-  });
-  return () => {
-    return isCanceled;
-  };
-};
 
 const createTakeAndActionMiddleware = <A: Object>() => {
   let takePatterns: Array<TakePattern<A>> = [];
@@ -67,7 +58,7 @@ const createSagaRunner = (take, put, select) => {
       race: cancelable(race, canceledFromParent),
       all: cancelable(all, canceledFromParent),
       delay: cancelable(delay, canceledFromParent),
-      canceled: createCanceled(canceledFromParent),
+      canceled: isRejected(canceledFromParent),
     })(...args);
   };
 
