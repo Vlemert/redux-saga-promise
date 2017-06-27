@@ -8,13 +8,9 @@ import race from './utils/race';
 import all from './utils/all';
 import delay from './utils/delay';
 import isRejected from './utils/is-rejected';
+import cancelable from './utils/cancelable';
 
 const voidPromise = new Promise(() => {});
-
-const cancelable = (func, canceled) => (...args) => Promise.race([
-  func(...args),
-  canceled,
-]);
 
 const createTakeAndActionMiddleware = <A: Object>() => {
   let takePatterns: Array<TakePattern<A>> = [];
