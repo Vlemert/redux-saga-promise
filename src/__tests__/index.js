@@ -51,7 +51,7 @@ describe('middleware', () => {
 
   test('throws if middleware is not attached to a store', () => {
     const unattachedMiddleware = createMiddleware();
-    expect(() => unattachedMiddleware.run()).toThrowErrorMatchingSnapshot();
+    expect(() => unattachedMiddleware.run(() => () => {})).toThrowErrorMatchingSnapshot();
   });
 
   describe('waiting for actions', () => {

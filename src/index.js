@@ -25,74 +25,103 @@ const createCanceled = (canceled) => {
   };
 };
 
-const createCallAndCancel = (innerCall, canceledFromParent) => {
-  const sagaPromises = new Map();
+const createTakeAndActionMiddleware = <A: Object>() => {
+  let takePatterns: Array<TakePattern<A>> = [];
 
-  const call = <T>(saga: (helpers: *) => () => T, ...args) => {
-    let rej;
-    const canceled = Promise.race([
-      new Promise((resolve, reject) => {
-        rej = reject;
-      }),
-      canceledFromParent,
-    ]);
+  const take = createTake(takePatterns);
 
-    const race = Promise.race([
-      innerCall(saga, canceled, ...args),
-      canceled,
-    ]);
+  const actionMiddleware = (next: (A) => A) => (action: A): A => {
+    let result = next(action);
 
-    if (rej) {
-      sagaPromises.set(race, rej);
-    }
+    takePatterns = takePatterns.reduce((falsePatterns, pattern) => {
+      if (pattern.func(action)) {
+        pattern.resolve(action);
+        return falsePatterns;
+      }
 
-    return race;
-  };
+      return [
+        ...falsePatterns,
+        pattern,
+      ];
+    }, []);
 
-  const cancel = (sagaPromise) => {
-    const cancelSaga = sagaPromises.get(sagaPromise);
-
-    if (!cancelSaga) {
-      // do we want to be able to cancel other things as well? (delay, race, etc)
-      throw new Error('You can only cancel call promises');
-    }
-
-    sagaPromise.catch(() => {/* Prevent unhandled promise rejection */});
-    cancelSaga('canceled');
+    return result;
   };
 
   return {
-    call,
-    cancel,
+    take,
+    actionMiddleware,
   }
 };
 
-function createMiddleware<S, A: Object>() {
-  let innerCall;
+const createSagaRunner = (take, put, select) => {
+  const runSaga = <T>(saga: (helpers: *) => () => T, canceledFromParent = voidPromise, ...args): T => {
+    const { call, cancel } = createCallAndCancel(canceledFromParent);
 
-  const middleware = (store: MiddlewareAPI<S, A>) => {
-    let takePatterns: Array<TakePattern<A>> = [];
+    return saga({
+      take,
+      put,
+      select,
+      call,
+      cancel,
+      race: cancelable(race, canceledFromParent),
+      all: cancelable(all, canceledFromParent),
+      delay: cancelable(delay, canceledFromParent),
+      canceled: createCanceled(canceledFromParent),
+    })(...args);
+  };
 
-    const put = (action) => {
-      store.dispatch(action);
+  const createCallAndCancel = (canceledFromParent) => {
+    const sagaPromises = new Map();
+
+    const call = <T>(saga: (helpers: *) => () => T, ...args) => {
+      let rej;
+      const canceled = Promise.race([
+        new Promise((resolve, reject) => {
+          rej = reject;
+        }),
+        canceledFromParent,
+      ]);
+
+      const race = Promise.race([
+        runSaga(saga, canceled, ...args),
+        canceled,
+      ]);
+
+      if (rej) {
+        sagaPromises.set(race, rej);
+      }
+
+      return race;
     };
 
-    const take = createTake(takePatterns);
+    const cancel = (sagaPromise) => {
+      const cancelSaga = sagaPromises.get(sagaPromise);
 
-    innerCall = <T>(saga: (helpers: *) => () => T, canceledFromParent = voidPromise, ...args): T => {
-      const { call, cancel } = createCallAndCancel(innerCall, canceledFromParent);
+      if (!cancelSaga) {
+        // do we want to be able to cancel other things as well? (delay, race, etc)
+        throw new Error('You can only cancel call promises');
+      }
 
-      return saga({
-        take,
-        put,
-        select,
-        call,
-        cancel,
-        race: cancelable(race, canceledFromParent),
-        all: cancelable(all, canceledFromParent),
-        delay: cancelable(delay, canceledFromParent),
-        canceled: createCanceled(canceledFromParent),
-      })(...args);
+      sagaPromise.catch(() => {/* Prevent unhandled promise rejection */});
+      cancelSaga('canceled');
+    };
+
+    return {
+      call,
+      cancel,
+    }
+  };
+
+  return <T>(saga: (helpers: *) => () => T) => runSaga(saga);
+};
+
+function createMiddleware<S, A: Object>() {
+  let run;
+
+  const middleware = (store: MiddlewareAPI<S, A>) => {
+    const put = (action) => {
+      store.dispatch(action);
     };
 
     const select = (selector, ...args) => {
@@ -102,28 +131,16 @@ function createMiddleware<S, A: Object>() {
       return selector(store.getState(), ...args);
     };
 
-    return (next: (A) => A) => (action: A): A => {
-      let result = next(action);
+    const { take, actionMiddleware } = createTakeAndActionMiddleware();
 
-      takePatterns = takePatterns.reduce((falsePatterns, pattern) => {
-        if (pattern.func(action)) {
-          pattern.resolve(action);
-          return falsePatterns;
-        }
+    run = createSagaRunner(take, put, select);
 
-        return [
-          ...falsePatterns,
-          pattern,
-        ];
-      }, []);
-
-      return result;
-    }
+    return actionMiddleware;
   };
 
-  middleware.run = (...args) => {
-    if (innerCall) {
-      return innerCall(...args);
+  middleware.run = <T>(saga: (helpers: *) => () => T) => {
+    if (run) {
+      return run(saga);
     }
 
     throw new Error('Cannot run sagas before connecting the middleware to a store');
